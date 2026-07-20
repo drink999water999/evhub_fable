@@ -42,9 +42,9 @@ const IMG = {
   bike:    {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Beryl%20Electric%20Bike.jpg?width=1200", credit:"CC BY 2.0 · bfishadow", page:"https://commons.wikimedia.org/wiki/File:Beryl_Electric_Bike.jpg"},
   scooter: {src:"https://s7ap1.scene7.com/is/image/ninebotstage/ap_en_segway_com_static_images_MAXG2_screen-1-logo?dpr=on%2C3&fmt=png-alpha&network=on", credit:"Segway", page:"https://www.segway.com"},
   wallbox: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Portable%20EV%20Charger%20Wallbox%20Unit%20with%20Red%20CEE%20Plug%20White%20Background%20EV%20WALL%20BOX%20EVWALLBOX.png?width=1200", credit:"CC BY 2.5 · go-e", page:"https://commons.wikimedia.org/wiki/File:Portable_EV_Charger_Wallbox_Unit_with_Red_CEE_Plug_White_Background_EV_WALL_BOX_EVWALLBOX.png"},
-  eactros: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Mercedes-Benz%20eActros%2C%20IAA%202018%2C%20Frankfurt%20(1Y7A1361).jpg?width=1200", credit:"CC BY-SA 4.0 · Matti Blume", page:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_eActros,_IAA_2018,_Frankfurt_(1Y7A1361).jpg"},
-  volvofl: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Volvo%20FL%20Electric%2C%20IAA%202018%2C%20Frankfurt%20(1Y7A1372).jpg?width=1200", credit:"CC BY-SA 4.0 · Matti Blume", page:"https://commons.wikimedia.org/wiki/File:Volvo_FL_Electric,_IAA_2018,_Frankfurt_(1Y7A1372).jpg"},
-  semi:    {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Tesla%20Semi%20-%20Christmas%20Eve%202017%20(24455959268).jpg?width=1200", credit:"CC BY 2.0 · Steve Jurvetson", page:"https://commons.wikimedia.org/wiki/File:Tesla_Semi_-_Christmas_Eve_2017_(24455959268).jpg"},
+  eactros: {src:"https://commons.wikimedia.org/wiki/Special:FilePath/EActros%20300%2C%20Nufam%202023%2C%20Rheinstetten%20(P1130644).jpg?width=1200", credit:"Wikimedia Commons · Alexander Migl", page:"https://commons.wikimedia.org/wiki/File:EActros_300,_Nufam_2023,_Rheinstetten_(P1130644).jpg"},
+  volvofe: {src:"https://commons.wikimedia.org/wiki/Special:FilePath/Volvo%20Trucks%20FE%20Electric.jpg?width=1200", credit:"Wikimedia Commons · Volvo Trucks", page:"https://commons.wikimedia.org/wiki/File:Volvo_Trucks_FE_Electric.jpg"},
+  semi:    {src:"https://commons.wikimedia.org/wiki/Special:FilePath/The%20Tesla%20Semi%20Truck%20(40705940423).jpg?width=1200", credit:"Wikimedia Commons · Steve Jurvetson", page:"https://commons.wikimedia.org/wiki/File:The_Tesla_Semi_Truck_(40705940423).jpg"},
   cable:   {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/EV%20Type2%20Charging%20Cable.jpg?width=1200", credit:"Wikimedia Commons", page:"https://commons.wikimedia.org/wiki/File:EV_Type2_Charging_Cable.jpg"},
 };
 
@@ -113,9 +113,9 @@ const VEHICLES = [
   warranty:{ar:"بطارية 6 سنوات / 600 ألف كم",en:"Battery 6 yrs / 600,000 km"},
   source:{ar:"وكالة سعودية — قطاع الأساطيل",en:"Saudi fleet-sector import"}, sellerId:"d3"},
 
- {id:"volvo-fl-e", cat:"truck", brand:"Volvo", model:"FL Electric", year:2023, price:365000, cond:"used",
-  city:"dammam", odo:48000, batt:265, soh:91, range:300, rangeStd:"City", dc:150, ac:22, connAC:"Type 2", connDC:"CCS2",
-  t1080:90, drive:"4x2", seats:2, v2l:false, verified:true, inspected:true, featured:false, img:IMG.volvofl,
+ {id:"volvo-fe-e", cat:"truck", brand:"Volvo", model:"FE Electric", year:2023, price:365000, cond:"used",
+  city:"dammam", odo:48000, batt:265, soh:91, range:275, rangeStd:"City", dc:150, ac:22, connAC:"Type 2", connDC:"CCS2",
+  t1080:90, drive:"6x2", seats:2, v2l:false, verified:true, inspected:true, featured:false, img:IMG.volvofe,
   mono:["#9fb8ce","#2b4356"],
   warranty:{ar:"بطارية سنتان متبقيتان",en:"2 yrs battery warranty left"},
   source:{ar:"أسطول توزيع محلي",en:"Local distribution fleet"}, sellerId:"d3"},

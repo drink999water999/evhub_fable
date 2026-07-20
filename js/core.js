@@ -224,8 +224,9 @@ function footerHTML(){
         <p style="font-size:.86rem;line-height:1.8">${t("ft.about")}</p>
       </div>
       <div><h4>${t("ft.market")}</h4>
-        <a href="#/market?cat=car">${t("cat.car")}</a><a href="#/market?cat=motorcycle">${t("cat.motorcycle")}</a>
-        <a href="#/market?cat=charger">${t("cat.charger")}</a><a href="#/market?cat=parts">${t("cat.parts")}</a></div>
+        <a href="#/market?cat=car">${t("cat.car")}</a><a href="#/market?cat=truck">${t("cat.truck")}</a>
+        <a href="#/market?cat=motorcycle">${t("cat.motorcycle")}</a><a href="#/market?cat=charger">${t("cat.charger")}</a>
+        <a href="#/market?cat=parts">${t("cat.parts")}</a></div>
       <div><h4>${t("ft.tools")}</h4>
         <a href="#/tools/finder">${t("tl.finder")}</a><a href="#/tools/range">${t("tl.range")}</a>
         <a href="#/compare">${t("tl.cmp")}</a><a href="#/tools/tco">${t("tl.tco")}</a></div>

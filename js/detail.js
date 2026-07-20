@@ -6,14 +6,17 @@ Routes.vehicle = (app, parts) => {
   if (!v){ location.hash = "#/market"; return; }
   const seller = DB.SELLERS[v.sellerId];
   const isCar = v.cat === "car";
+  // Trucks and motorcycles have real batteries and intercity range, so they
+  // get the battery passport + decision tools just like cars.
+  const bigEV = ["car", "truck", "motorcycle"].includes(v.cat);
   const alertOn = !!State.alerts[v.id];
   const summer = realRange(v);
 
   const secs = [
     ["overview", t("vd.secOverview")],
     ["specs", t("vd.secSpecs")],
-    isCar && ["battery", t("vd.secBattery")],
-    isCar && ["tools", t("vd.secTools")],
+    bigEV && ["battery", t("vd.secBattery")],
+    bigEV && ["tools", t("vd.secTools")],
     ["reviews", t("vd.secReviews")],
     ["seller", t("vd.secSeller")],
   ].filter(Boolean);
@@ -35,7 +38,7 @@ Routes.vehicle = (app, parts) => {
         </div>
         <!-- quick hero stats -->
         <div class="spec-row-grid" style="margin-top:18px">
-          ${isCar ? `
+          ${bigEV ? `
           <div class="spec-tile hero-spec"><div class="si">${IC.sun}</div>
             <div><small>${t("vd.rangeSummer")}</small><b class="num">≈ ${fmtN(summer)} ${t("km")}</b></div></div>` : ""}
           <div class="spec-tile"><div class="si">${IC.range}</div>
@@ -45,7 +48,7 @@ Routes.vehicle = (app, parts) => {
           ${isCar && v.t1080 ? `<div class="spec-tile"><div class="si">${IC.bolt}</div>
             <div><small>${t("vd.chargeTime")}</small><b class="num">${v.t1080} ${t("min")}</b></div></div>` : ""}
         </div>
-        ${isCar ? `<div class="tip-band light" style="margin-top:12px">${IC.bulb} <span>${t("vd.summerNote")}</span></div>` : ""}
+        ${bigEV ? `<div class="tip-band light" style="margin-top:12px">${IC.bulb} <span>${t("vd.summerNote")}</span></div>` : ""}
       </div>
 
       <aside class="dpanel">
@@ -55,8 +58,8 @@ Routes.vehicle = (app, parts) => {
             <div class="sub"><span class="num">${v.year}</span> · ${cityName(v.city)} · ${v.cond === "new" ? t("mk.condNew") : `${fmtN(v.odo)} ${t("km")}`}</div>
           </div>
           <div class="dprice"><b class="num">${fmtN(v.price)}</b><span>${t("sar")} · ${t("vd.inclVat")}</span></div>
-          ${isCar ? `<div class="dfin">${t("vd.estFin")}: <b class="num">${SAR(finMonthly(v.price))}</b> ${t("perMonth")} <small style="color:var(--ink-3)">· ${t("vd.finNote")}</small></div>` : ""}
-          ${v.cond === "used" && isCar ? `<div style="margin:16px 0 4px"><div class="soh">
+          ${bigEV ? `<div class="dfin">${t("vd.estFin")}: <b class="num">${SAR(finMonthly(v.price))}</b> ${t("perMonth")} <small style="color:var(--ink-3)">· ${t("vd.finNote")}</small></div>` : ""}
+          ${v.cond === "used" && bigEV ? `<div style="margin:16px 0 4px"><div class="soh">
             <span style="font-size:.74rem;color:var(--ink-3);font-weight:700">${t("vd.soh")}</span>
             <div class="soh-track"><div class="soh-fill ${v.soh>=90?"ok":v.soh>=80?"mid":"low"}" style="width:${v.soh}%"></div></div>
             <span class="soh-val num">${v.soh}%</span></div></div>` : ""}
@@ -97,7 +100,7 @@ Routes.vehicle = (app, parts) => {
       <h2><span class="hico">${IC.gauge}</span>${t("vd.secSpecs")}</h2>
       <div id="specBody"></div>
     </section>
-    ${isCar ? `
+    ${bigEV ? `
     <section class="vsection" id="sec-battery">
       <h2><span class="hico">${IC.batt}</span>${t("vd.secBattery")}</h2>
       <div id="battBody"></div>
@@ -126,9 +129,9 @@ Routes.vehicle = (app, parts) => {
   /* specs */
   app.querySelector("#specBody").innerHTML = specsHTML(v);
   /* battery passport */
-  if (isCar){ app.querySelector("#battBody").innerHTML = batteryHTML(v); mountBattery(app, v); }
+  if (bigEV){ app.querySelector("#battBody").innerHTML = batteryHTML(v); mountBattery(app, v); }
   /* tools */
-  if (isCar){ app.querySelector("#toolsBody").innerHTML = toolsHTML(v); mountDetailTools(app, v); }
+  if (bigEV){ app.querySelector("#toolsBody").innerHTML = toolsHTML(v); mountDetailTools(app, v); }
   /* reviews */
   app.querySelector("#revBody").innerHTML = reviewsHTML(v);
   /* seller */
@@ -186,14 +189,14 @@ Routes.vehicle = (app, parts) => {
 
 /* ── section builders ── */
 function overviewHTML(v, summer){
-  const isCar = v.cat === "car";
+  const bigEV = ["car", "truck", "motorcycle"].includes(v.cat);
   const tiles = [
-    isCar && [IC.sun, t("vd.rangeSummer"), `≈ ${fmtN(summer)} ${t("km")}`, true],
+    bigEV && [IC.sun, t("vd.rangeSummer"), `≈ ${fmtN(summer)} ${t("km")}`, true],
     [IC.range, `${t("vd.range")} (${v.rangeStd})`, `${fmtN(v.range)} ${t("km")}`],
     [IC.batt, t("vd.batt"), `${v.batt} ${t("kwh")}`],
     v.cond === "used" && [IC.shield, t("vd.soh"), `${v.soh}%`],
-    isCar && [IC.bolt, t("vd.dc"), v.dc ? `${v.dc} ${t("kw")}` : "—"],
-    isCar && v.t1080 && [IC.clock, t("vd.chargeTime"), `${v.t1080} ${t("min")}`],
+    v.dc && [IC.bolt, t("vd.dc"), `${v.dc} ${t("kw")}`],
+    v.t1080 && [IC.clock, t("vd.chargeTime"), `${v.t1080} ${t("min")}`],
     [IC.gauge, t("vd.drivetrain"), v.drive],
     [IC.users, t("vd.seats"), String(v.seats)],
   ].filter(Boolean);
@@ -203,7 +206,7 @@ function overviewHTML(v, summer){
 }
 
 function specsHTML(v){
-  const isCar = v.cat === "car";
+  const bigEV = ["car", "truck", "motorcycle"].includes(v.cat);
   const sheet = (icon, title, rows) => `<div class="card sheet">
     <div class="sheet-head"><span class="si">${icon}</span><b>${title}</b></div>
     <div class="sheet-body">${rows.filter(Boolean).map(([k, val, hl]) =>
@@ -212,14 +215,14 @@ function specsHTML(v){
     ${sheet(IC.batt, t("vd.grpBattery"), [
       [t("vd.batt"), `${v.batt} ${t("kwh")}`],
       v.cond === "used" && [t("vd.soh"), `${v.soh}%`, true],
-      isCar && [t("vd.dc"), v.dc ? `${v.dc} ${t("kw")} · ${v.connDC}` : "—"],
+      v.dc && [t("vd.dc"), `${v.dc} ${t("kw")} · ${v.connDC}`],
       [t("vd.ac"), `${v.ac} ${t("kw")} · ${v.connAC}`],
-      isCar && v.t1080 && [t("vd.chargeTime"), `${v.t1080} ${t("min")}`],
-      isCar && [t("vd.v2l"), v.v2l ? `✓ ${t("vd.yes")}` : t("vd.no")],
+      v.t1080 && [t("vd.chargeTime"), `${v.t1080} ${t("min")}`],
+      v.cat !== "truck" && [t("vd.v2l"), v.v2l ? `✓ ${t("vd.yes")}` : t("vd.no")],
     ])}
     ${sheet(IC.range, t("vd.grpPerf"), [
       [`${t("vd.range")} (${v.rangeStd})`, `${fmtN(v.range)} ${t("km")}`],
-      isCar && [t("vd.rangeSummer"), `≈ ${fmtN(realRange(v))} ${t("km")}`, true],
+      bigEV && [t("vd.rangeSummer"), `≈ ${fmtN(realRange(v))} ${t("km")}`, true],
       [t("vd.drivetrain"), v.drive],
       [t("vd.seats"), String(v.seats)],
     ])}

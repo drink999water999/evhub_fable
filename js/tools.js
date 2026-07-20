@@ -36,7 +36,8 @@ function toolsHub(app){
    Two overlapping circles: outer = one-way, inner = round trip
    ═══════════════════════════════════════════════════════ */
 function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact = false} = {}){
-  const cars = DB.VEHICLES.filter(v => v.cat === "car");
+  // range applies to anything that travels intercity: cars, trucks, motorcycles
+  const cars = DB.VEHICLES.filter(v => ["car", "truck", "motorcycle"].includes(v.cat));
   const state = {
     vehicle: fixedVehicle || cars[0],
     origin: null,            // {lat,lng,label}

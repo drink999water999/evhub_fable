@@ -246,7 +246,7 @@ Routes.sell = (app) => {
       <div class="wiz-q">${t("sl." + steps[step])}</div>`;
     let inner = "";
     if (step === 0) inner = `<div class="wiz-opts">
-      ${["car","motorcycle","scooter","bike"].map(c => `<button class="wiz-opt ${data.cat===c?"sel":""}" data-cat="${c}"><b>${t("cat."+c)}</b></button>`).join("")}</div>`;
+      ${["car","truck","motorcycle","scooter","bike"].map(c => `<button class="wiz-opt ${data.cat===c?"sel":""}" data-cat="${c}"><b>${t("cat."+c)}</b></button>`).join("")}</div>`;
     if (step === 1) inner = inputRow("brand", t("sl.brand")) + inputRow("model", t("sl.model")) +
       `<div class="duo">${inputRow("year", t("sl.yearL"), "number", "2024")}${inputRow("price", t("sl.price"), "number", "120000")}</div>` +
       `<div class="duo">${inputRow("odo", t("sl.odoL"), "number", "25000")}

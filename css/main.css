@@ -42,6 +42,10 @@
 /* ── base ── */
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
+/* global guard: nothing may cause horizontal scroll / edge-clipping on mobile */
+html,body{overflow-x:hidden; max-width:100%}
+.wrap,.hero-inner,.page{min-width:0; max-width:100%}
+h1,h2,h3,p{overflow-wrap:break-word}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:"IBM Plex Sans Arabic","Space Grotesk",system-ui,sans-serif;
@@ -181,6 +185,7 @@ main{min-height:70vh}
 .hero{position:relative; background:var(--panel); color:#eafce9; overflow:hidden}
 .hero::before{content:""; position:absolute; inset:0; background:var(--panel-glow),radial-gradient(900px 500px at 50% 120%,rgba(14,74,52,.55),transparent 65%)}
 .hero-inner{position:relative; display:grid; grid-template-columns:1.02fr .98fr; gap:48px; align-items:center; padding-block:72px 84px}
+.hero-inner>div{min-width:0; max-width:100%}
 .hero h1{font-size:clamp(2rem,4.4vw,3.3rem); line-height:1.16; margin-bottom:16px; color:#fff}
 .hero h1 em{font-style:normal; color:var(--lime)}
 .hero p.lead{color:#a7c6b5; font-size:1.08rem; max-width:32em; margin-bottom:28px}
@@ -611,12 +616,13 @@ footer.site .wrap{padding:52px 24px 28px; position:relative}
   .section{padding:42px 0}
   .section-head{flex-direction:column; align-items:flex-start; gap:12px}
   .hero-inner{padding-block:36px 46px}
-  .hero h1{font-size:1.75rem}
+  .hero h1{font-size:clamp(1.5rem,6.4vw,1.95rem); line-height:1.22; letter-spacing:-.01em; overflow-wrap:break-word}
   .hero p.lead{font-size:.98rem}
-  .hero-stats{flex-wrap:wrap; gap:12px 0; margin-top:28px}
-  .hstat{padding-inline:18px}
+  .hero-stats{flex-wrap:wrap; gap:14px 0; margin-top:28px}
+  .hstat{padding-inline:14px; min-width:0}
   .hstat:first-child{padding-inline-start:0}
   .hstat b{font-size:1.35rem}
+  .hstat span{font-size:.72rem}
   .searchpanel{padding:7px}
   .searchpanel .btn{padding:10px 16px; font-size:.86rem}
   .quick-link{padding:8px 13px; font-size:.8rem}
