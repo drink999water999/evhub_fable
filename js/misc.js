@@ -21,7 +21,7 @@ Routes.services = (app) => {
     <!-- Installation journey -->
     <section class="section" id="svc-install" style="padding-top:10px">
       <div class="section-head"><div><h2>${t("sv.chargerT")}</h2></div></div>
-      <div class="detail-grid" style="grid-template-columns:.9fr 1.1fr">
+      <div class="tool-split">
         <div class="card card-pad range-controls">
           <div class="selrow"><label>${t("sv.q3")}</label>
             <select id="svV"><option value="">—</option>

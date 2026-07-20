@@ -69,6 +69,7 @@ Routes.home = (app) => {
       <h2>${t("cats.title")}</h2><div class="sub">${t("cats.sub")}</div></div></div>
     <div class="cat-strip reveal">
       ${catThumb("car", DB.IMG.zeekr.src)}
+      ${catThumb("truck", DB.IMG.eactros.src, IC.truck)}
       ${catThumb("motorcycle", DB.IMG.moto.src)}
       ${catThumb("scooter", DB.IMG.scooter.src, IC.scooter)}
       ${catThumb("bike", DB.IMG.bike.src, IC.bike)}

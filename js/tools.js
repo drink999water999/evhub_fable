@@ -42,11 +42,14 @@ function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact 
     origin: null,            // {lat,lng,label}
     charge: 90, reserve: 15, temp: 45, style: 1,
     map: null, layers: [],
+    usable: 0, round: 0,
+    routeLayers: [], routeReq: 0,
+    lastTrip: null,          // {lat,lng,distance,geometry,isRoad}
   };
   const cityOpt = DB.CITIES.map(c => `<option value="${c.id}" ${c.id===State.myCity?"selected":""}>${LOC(c)}</option>`).join("");
 
   host.innerHTML = `
-  <div class="map-layout" style="grid-template-columns:${compact ? "320px 1fr" : "360px 1fr"}">
+  <div class="rw-cols ${compact ? "compact" : ""}">
     <div style="display:flex;flex-direction:column;gap:14px">
       ${fixedVehicle ? "" : `<div class="selrow"><label>${t("rm.vehicle")}</label>
         <select data-r="veh">${cars.map(v => `<option value="${v.id}">${vName(v)} (${v.range} ${t("km")})</option>`).join("")}</select></div>`}
@@ -70,21 +73,95 @@ function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact 
         <div class="cap">${t("rm.usable")} · ${t("rm.acNote")}</div>
       </div>
 
+      <!-- route-to-destination result (appears after a map click) -->
+      <div class="trip-result" data-r="trip" hidden></div>
+
       <!-- the two-circle explanation -->
       <div class="range-legend">
         <div class="leg-card"><i style="background:rgba(14,122,82,.35);border:2px solid #0e7a52"></i>
           <span><b>${t("rm.oneWayT")} — <span class="num" data-r="owKm"></span> ${t("km")}</b>${t("rm.oneWayD")}</span></div>
         <div class="leg-card"><i style="background:rgba(37,99,235,.3);border:2px dashed #2563eb"></i>
           <span><b>${t("rm.roundT")} — <span class="num" data-r="rtKm"></span> ${t("km")}</b>${t("rm.roundD")}</span></div>
+        <div class="tip-band light" style="font-size:.78rem">${IC.target} ${t("rm.clickHint")}</div>
         <div class="tip-band light" style="font-size:.78rem">${IC.bulb} ${t("rm.mapHint")}</div>
       </div>
       <div data-r="cities"></div>
     </div>
-    <div class="map-box" style="height:${compact ? "520px" : "640px"}"><div id="${mapId}" style="width:100%;height:100%"></div></div>
+    <div class="map-box rw-map"><div id="${mapId}" style="width:100%;height:100%"></div></div>
   </div>`;
 
   const $ = sel => host.querySelector(`[data-r="${sel}"]`);
   const cityById = id => DB.CITIES.find(c => c.id === id);
+
+  /* ── click-to-route: road route + distance to any point on the map ── */
+  const clearTrip = () => {
+    state.routeLayers.forEach(l => { try { l.remove(); } catch(e){} });
+    state.routeLayers = []; state.lastTrip = null; state.routeReq++;
+    const box = $("trip"); if (box){ box.hidden = true; box.innerHTML = ""; }
+  };
+  const renderTrip = trip => {
+    state.lastTrip = trip;
+    const {lat, lng, distance, geometry, isRoad} = trip;
+    const usable = state.usable, round = state.round;
+    const reachable = distance <= usable, roundOk = distance <= round;
+    const chg = +$("chg").value, res = $("res") ? +$("res").value : state.reserve;
+    const arrive = Math.max(0, Math.round((chg - res) * (1 - distance / usable) + res));
+    const color = reachable ? "#2563eb" : "#cc3a3a";
+    if (state.map){
+      state.routeLayers.forEach(l => { try { l.remove(); } catch(e){} });
+      state.routeLayers = [];
+      const o = [state.origin.lat, state.origin.lng];
+      const line = geometry
+        ? L.geoJSON(geometry, {style:{color, weight:5, opacity:.88}}).addTo(state.map)
+        : L.polyline([o, [lat, lng]], {color, weight:4, dashArray:"8 8", opacity:.85}).addTo(state.map);
+      const destMk = L.circleMarker([lat, lng], {radius:9, color:"#fff", weight:3, fillColor:color, fillOpacity:1})
+        .addTo(state.map).bindTooltip(t("rm.dest"), {direction:"top"});
+      state.routeLayers.push(line, destMk);
+      try { state.map.fitBounds(line.getBounds(), {padding:[46, 46], maxZoom:10}); } catch(e){}
+    }
+    const box = $("trip");
+    if (box){
+      box.hidden = false;
+      box.className = `trip-result ${reachable ? "reachable" : "unreachable"}`;
+      box.innerHTML = `
+        <div class="tr-top">
+          <b class="tr-km num">${distance.toFixed(0)} <small>${t("km")}</small></b>
+          <span class="badge ${isRoad ? "badge-verified" : "badge-soon"}">${isRoad ? t("rm.roadRoute") : t("rm.geoEst")}</span>
+          <button class="tr-clear" data-r="tripClear" title="${t("rm.clearDest")}">✕</button>
+        </div>
+        <b class="tr-verdict">${reachable ? "✓ " + t("rm.destReach") : "⚠ " + t("rm.destNo")}</b>
+        <div class="tr-facts">
+          <span>${t("rm.battArrive")}: <b class="num">${reachable ? arrive + "%" : "—"}</b></span>
+          <span>${roundOk ? "✓ " + t("rm.roundOk") : "· " + t("rm.roundNo")}</span>
+        </div>`;
+      box.querySelector('[data-r="tripClear"]').addEventListener("click", clearTrip);
+    }
+  };
+  const pickDest = (lat, lng) => {
+    if (!state.origin || !state.usable) return;
+    const req = ++state.routeReq;
+    const linear = distKm(state.origin, {lat, lng}); // haversine × 1.25 road factor
+    const box = $("trip");
+    if (box){
+      box.hidden = false; box.className = "trip-result loading";
+      box.innerHTML = `<div class="tr-top"><b class="tr-verdict">${t("rm.calcRoute")}</b></div>
+        <div class="tr-facts"><span>${t("rm.calcRouteD")}</span></div>`;
+    }
+    const fallback = () => { if (req === state.routeReq) renderTrip({lat, lng, distance:linear, geometry:null, isRoad:false}); };
+    if (typeof fetch !== "function"){ fallback(); return; }
+    const url = `https://router.project-osrm.org/route/v1/driving/${state.origin.lng},${state.origin.lat};${lng},${lat}?overview=full&geometries=geojson`;
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = setTimeout(() => { try { ctrl?.abort(); } catch(e){} }, 7000);
+    fetch(url, ctrl ? {signal:ctrl.signal} : {})
+      .then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(d => {
+        clearTimeout(timer);
+        const route = d?.routes?.[0];
+        if (!route) throw 0;
+        if (req === state.routeReq) renderTrip({lat, lng, distance:route.distance / 1000, geometry:route.geometry, isRoad:true});
+      })
+      .catch(() => { clearTimeout(timer); fallback(); });
+  };
 
   const calc = () => {
     const v = state.vehicle;
@@ -97,6 +174,7 @@ function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact 
     if ($("resV")) $("resV").textContent = res + "%";
     const usable = Math.round(realRange(v, {tempC:temp, style}) * (chg - res) / 100);
     const round = Math.round(usable / 2);
+    state.usable = usable; state.round = round;
     $("out").innerHTML = `${fmtN(usable)} <small style="font-size:1rem">${t("km")}</small>`;
     $("owKm").textContent = fmtN(usable);
     $("rtKm").textContent = fmtN(round);
@@ -134,20 +212,22 @@ function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact 
         state.layers.push(L.circleMarker([c.lat, c.lng], {radius:6.5, color:"#fff", weight:2, fillColor:col, fillOpacity:1})
           .bindTooltip(`${LOC(c)} — ${d} ${t("km")}`).addTo(state.map));
       });
-      state.map.flyTo(o, usable > 450 ? 6 : usable > 250 ? 6.5 : 7.5, {duration:.7});
+      if (!state.lastTrip) state.map.flyTo(o, usable > 450 ? 6 : usable > 250 ? 6.5 : 7.5, {duration:.7});
     }
+    /* keep the destination verdict in sync with the new settings */
+    if (state.lastTrip) renderTrip(state.lastTrip);
   };
 
   // events
   if ($("veh")) $("veh").addEventListener("change", e => { state.vehicle = cars.find(v => v.id === e.target.value); calc(); });
   $("city").addEventListener("change", e => {
-    const c = cityById(e.target.value); state.origin = {lat:c.lat, lng:c.lng, label:LOC(c)}; calc();
+    const c = cityById(e.target.value); state.origin = {lat:c.lat, lng:c.lng, label:LOC(c)}; clearTrip(); calc();
   });
   $("loc").addEventListener("click", () => {
     if (!navigator.geolocation){ toast(t("rm.locDenied")); return; }
     $("loc").disabled = true;
     navigator.geolocation.getCurrentPosition(
-      pos => { state.origin = {lat:pos.coords.latitude, lng:pos.coords.longitude, label:t("rm.myLoc")}; $("loc").disabled = false; calc(); toast("📍 " + t("rm.myLoc")); },
+      pos => { state.origin = {lat:pos.coords.latitude, lng:pos.coords.longitude, label:t("rm.myLoc")}; $("loc").disabled = false; clearTrip(); calc(); toast("📍 " + t("rm.myLoc")); },
       () => { $("loc").disabled = false; toast(t("rm.locDenied")); },
       {timeout:8000});
   });
@@ -155,7 +235,10 @@ function renderRangeWidget(host, {fixedVehicle = null, mapId = "rwMap", compact 
 
   setTimeout(() => {
     if (!host.isConnected || !document.getElementById(mapId)) return; // stale render
-    try { state.map = L_map(mapId, [24.2, 45.0], 5.5); } catch(e){
+    try {
+      state.map = L_map(mapId, [24.2, 45.0], 5.5);
+      if (state.map) state.map.on("click", e => pickDest(e.latlng.lat, e.latlng.lng));
+    } catch(e){
       console.error("EVHub range map:", e);
       const box = host.querySelector(".map-box");
       if (box && !box.querySelector(".leaflet-container")) box.innerHTML = mapFallback();
@@ -306,7 +389,7 @@ function toolFinder(app){
     const budgets = [[0,150000],[150000,220000],[220000,300000],[300000,999999]];
     const [bLo, bHi] = budgets[ans[0]];
     const wantBike = ans[2] === 3;
-    let pool = DB.VEHICLES.filter(v => wantBike ? v.cat !== "car" : v.cat === "car");
+    let pool = DB.VEHICLES.filter(v => wantBike ? !["car","truck"].includes(v.cat) : v.cat === "car");
     const scored = pool.map(v => {
       let score = 50;
       if (v.price >= bLo && v.price <= bHi) score += 25;
@@ -343,7 +426,7 @@ function toolFinder(app){
 function toolLab(app){
   const cars = DB.VEHICLES.filter(v => v.cat === "car");
   toolShell(app, t("lab.title"), t("lab.sub"), `
-    <div class="detail-grid" style="grid-template-columns:.9fr 1.1fr">
+    <div class="tool-split">
       <div class="card card-pad" style="display:flex;flex-direction:column;gap:12px">
         <div class="selrow"><label>${t("rm.vehicle")}</label>
           <select id="lbV">${cars.map(v => `<option value="${v.id}">${vName(v)}</option>`).join("")}</select></div>
@@ -400,7 +483,7 @@ function toolLab(app){
 function toolTCO(app){
   const cars = DB.VEHICLES.filter(v => v.cat === "car");
   toolShell(app, t("tco.title"), t("tco.sub"), `
-    <div class="detail-grid" style="grid-template-columns:.95fr 1.05fr">
+    <div class="tool-split">
       <div class="card card-pad" style="display:flex;flex-direction:column;gap:4px">
         <div class="selrow" style="margin-bottom:8px"><label>${t("tco.vehicle")}</label>
           <select id="tcV">${cars.map(v => `<option value="${v.id}">${vName(v)}</option>`).join("")}</select></div>

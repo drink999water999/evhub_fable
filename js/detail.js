@@ -259,33 +259,34 @@ function batteryHTML(v){
     [t("vd.sohMethod"), State.lang==="ar" ? "فحص OBD + اختبار سعة DC" : "OBD scan + DC capacity test"],
     [t("vd.connector"), `${v.connAC} / ${v.connDC}`],
   ];
-  return `<div class="cert-grid">
-    <!-- certificate -->
-    <div class="panel-dark cert-card">
-      <div class="cert-head">
-        <div class="cert-title"><span class="ci">${IC.shield}</span>
-          <span><b>${t("vd.sohTitle")}</b><small>${vName(v)} · <span class="num">${v.year}</span></small></span></div>
-        ${v.verified ? `<span class="pill-lime">${IC.check} ${t("vd.verified")}</span>` : ""}
-      </div>
-      <div class="ring-wrap">
-        ${certRing(v.soh)}
-        <div style="flex:1;min-width:200px">
-          <b style="color:#fff;font-size:1rem;display:block;margin-bottom:8px">${isNew ? t("vd.sohNewCar") : (State.lang==="ar" ? "بطارية بحالة ممتازة وموثّقة" : "Excellent, verified battery condition")}</b>
-          <div class="soh" style="margin-bottom:10px"><div class="soh-track"><div class="soh-fill ok" style="width:${v.soh}%"></div></div>
-            <span class="soh-val num" style="color:var(--lime)">${v.soh}%</span></div>
-          <p class="muted" style="font-size:.82rem;margin:0">${LOC(v.warranty)}</p>
-        </div>
-      </div>
-      <div class="cert-facts">
-        ${facts.map(([k, val]) => `<div class="cert-fact"><small>${k}</small><b>${val}</b></div>`).join("")}
-      </div>
-      ${isNew
-        ? `<div class="tip-band">${IC.bulb} <span>${State.lang==="ar" ? "تصدر شهادة الفحص الرقمية للسيارات المستعملة بعد فحص معتمد — هذه سيارة جديدة بضمان المصنع." : "Digital certificates are issued for used cars after an approved inspection — this is a new car under factory warranty."}</span></div>`
-        : `<button class="btn btn-primary" id="dlCert">⬇ ${t("vd.sohDl")}</button>`}
+  return `
+  <!-- certificate -->
+  <div class="panel-dark cert-card">
+    <div class="cert-head">
+      <div class="cert-title"><span class="ci">${IC.shield}</span>
+        <span><b>${t("vd.sohTitle")}</b><small>${vName(v)} · <span class="num">${v.year}</span></small></span></div>
+      ${v.verified ? `<span class="pill-lime">${IC.check} ${t("vd.verified")}</span>` : ""}
     </div>
+    <div class="ring-wrap">
+      ${certRing(v.soh)}
+      <div style="flex:1;min-width:200px">
+        <b style="color:#fff;font-size:1rem;display:block;margin-bottom:8px">${isNew ? t("vd.sohNewCar") : (State.lang==="ar" ? "بطارية بحالة ممتازة وموثّقة" : "Excellent, verified battery condition")}</b>
+        <div class="soh" style="margin-bottom:10px"><div class="soh-track"><div class="soh-fill ok" style="width:${v.soh}%"></div></div>
+          <span class="soh-val num" style="color:var(--lime)">${v.soh}%</span></div>
+        <p class="muted" style="font-size:.82rem;margin:0">${LOC(v.warranty)}</p>
+      </div>
+    </div>
+    <div class="cert-facts">
+      ${facts.map(([k, val]) => `<div class="cert-fact"><small>${k}</small><b>${val}</b></div>`).join("")}
+    </div>
+    ${isNew
+      ? `<div class="tip-band">${IC.bulb} <span>${State.lang==="ar" ? "تصدر شهادة الفحص الرقمية للسيارات المستعملة بعد فحص معتمد — هذه سيارة جديدة بضمان المصنع." : "Digital certificates are issued for used cars after an approved inspection — this is a new car under factory warranty."}</span></div>`
+      : `<button class="btn btn-primary" id="dlCert">⬇ ${t("vd.sohDl")}</button>`}
+  </div>
 
-    <!-- predictor controls -->
-    <div class="card card-pad" style="display:flex;flex-direction:column;gap:16px">
+  <!-- predictor: controls (start side / right in RTL) + result (end side / left in RTL) -->
+  <div class="bt-grid" style="margin-top:22px">
+    <div class="card card-pad bt-controls" style="display:flex;flex-direction:column;gap:16px">
       <div>
         <b style="font-size:1.05rem;display:flex;align-items:center;gap:9px">${IC.chart} ${t("bt.title")}</b>
         <p style="font-size:.84rem;color:var(--ink-2);margin:6px 0 0">${t("bt.sub")}</p>
@@ -310,10 +311,8 @@ function batteryHTML(v){
       <div class="selrow"><label>${t("bt.parking")}</label>
         <select id="btPark"><option value="0">${t("bt.shade")}</option><option value="1" selected>${t("bt.mixed")}</option><option value="2">${t("bt.sun")}</option></select></div>
     </div>
-  </div>
-
-  <!-- predictor result -->
-  <div class="panel-dark" style="margin-top:22px;padding:32px" id="btResult"></div>`;
+    <div class="panel-dark bt-result-panel" id="btResult"></div>
+  </div>`;
 }
 
 function mountBattery(app, v){
@@ -328,6 +327,41 @@ function mountBattery(app, v){
     $("btKm").value = p.dataset.km; $("btDays").value = p.dataset.days; $("btFast").value = p.dataset.fast;
     render();
   }));
+  /* SoH projection chart — SVG line/area over 8 years, 70% threshold, markers at 3 & 5 */
+  const sohChartSVG = m => {
+    const W = 560, H = 252, x0 = 44, x1 = 540, y0 = 22, y1 = 200;
+    const lo = Math.min(68, Math.floor(Math.min(...m.pts) / 5) * 5 - 2), hi = 100;
+    const X = yr => x0 + (x1 - x0) * yr / 8;
+    const Y = soh => y1 - (y1 - y0) * (soh - lo) / (hi - lo);
+    const line = m.pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(p).toFixed(1)}`).join(" ");
+    const area = `${line} L${x1},${y1} L${x0},${y1} Z`;
+    const grid = [100, 90, 80, 70].filter(g => g >= lo).map(g => `
+      <line x1="${x0}" y1="${Y(g)}" x2="${x1}" y2="${Y(g)}" stroke="rgba(255,255,255,.10)" stroke-width="1"/>
+      <text x="${x0 - 8}" y="${Y(g) + 4}" fill="#8fb3a0" font-size="11" text-anchor="end" font-family="Space Grotesk">${g}%</text>`).join("");
+    const thresh = 70 >= lo ? `
+      <line x1="${x0}" y1="${Y(70)}" x2="${x1}" y2="${Y(70)}" stroke="#f37070" stroke-width="1.6" stroke-dasharray="6 5" opacity=".8"/>
+      <text x="${x1}" y="${Y(70) - 7}" fill="#f37070" font-size="10.5" text-anchor="end" opacity=".9">${t("bt.threshold")}</text>` : "";
+    const dots = m.pts.map((p, i) => {
+      const key = i === 3 || i === 5;
+      return `
+      <circle cx="${X(i)}" cy="${Y(p)}" r="${key ? 6 : 3.2}" fill="${key ? "#c9f158" : "#7ea88f"}" stroke="${key ? "#0b2e20" : "none"}" stroke-width="${key ? 2.5 : 0}"/>
+      ${key ? `<rect x="${X(i) - 26}" y="${Y(p) - 34}" width="52" height="21" rx="10" fill="rgba(201,241,88,.16)" stroke="rgba(201,241,88,.4)"/>
+      <text x="${X(i)}" y="${Y(p) - 19}" fill="#c9f158" font-size="12.5" font-weight="700" text-anchor="middle" font-family="Space Grotesk">${p}%</text>` : ""}`;
+    }).join("");
+    const xLabels = m.pts.map((_, i) => `
+      <text x="${X(i)}" y="${y1 + 22}" fill="#8fb3a0" font-size="11" text-anchor="middle" font-family="Space Grotesk">${i === 0 ? t("bt.chartNow") : i}</text>`).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;direction:ltr" role="img" aria-label="${t("bt.chartTitle")}">
+      <defs><linearGradient id="sohGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#c9f158" stop-opacity=".28"/><stop offset="1" stop-color="#c9f158" stop-opacity=".02"/>
+      </linearGradient></defs>
+      ${grid}${thresh}
+      <path d="${area}" fill="url(#sohGrad)"/>
+      <path d="${line}" fill="none" stroke="#c9f158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${xLabels}
+      <text x="${(x0 + x1) / 2}" y="${H - 4}" fill="#6c8a79" font-size="10.5" text-anchor="middle">${t("bt.chartYear")} →</text>
+    </svg>`;
+  };
+
   const render = () => {
     const km = +$("btKm").value, days = +$("btDays").value, fast = +$("btFast").value;
     const park = +$("btPark").value, city = $("btCity").value;
@@ -338,29 +372,31 @@ function mountBattery(app, v){
     const m = degradationModel(v, city, {kmDay:km, daysWeek:days, fastPct:fast, parkSun:park});
     const heavy = m.annual >= 1.4;
     $("btResult").innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:30px;align-items:center" class="bt-res-grid">
-        <div>
-          <span class="pill-lime" style="margin-bottom:14px">${heavy ? "⚠ " + t("bt.resultKickerWarn") : IC.check + " " + t("bt.resultKicker")}</span>
-          <div class="stat-big num" style="margin:10px 0 4px">${m.y5}%</div>
-          <div class="muted" style="font-size:.88rem;margin-bottom:16px">${t("bt.y5")}</div>
-          <p class="muted" style="font-size:.85rem;line-height:1.75;margin-bottom:16px">${t("bt.resultDesc")}</p>
-          <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <div class="bt-res-head">
+        <span class="pill-lime">${heavy ? "⚠ " + t("bt.resultKickerWarn") : IC.check + " " + t("bt.resultKicker")}</span>
+        <div class="bt-res-hero">
+          <div>
+            <div class="stat-big num">${m.y5}%</div>
+            <div class="muted" style="font-size:.86rem">${t("bt.y5")}</div>
+          </div>
+          <div class="bt-res-chips">
             <span class="pill-dark num">${fmtN(m.kmYear)} ${t("bt.kmYear")}</span>
-            <span class="pill-dark num">${m.to70} ${t("bt.years")} ${t("bt.to70")}</span>
+            <span class="pill-dark">${t("bt.annual")} <b class="num" style="color:var(--lime)">&nbsp;${m.annual}%&nbsp;</b> ${t("bt.annualUnit")}</span>
+            <span class="pill-dark num">≈ ${m.to70} ${t("bt.years")} ${t("bt.to70")}</span>
           </div>
-        </div>
-        <div>
-          <div class="pred-stats">
-            ${[[t("bt.now"), v.soh],[t("bt.y3"), m.y3],[t("bt.y5"), m.y5]].map(([lb, val]) => `
-            <div class="pred-stat"><small>${lb}</small><b class="num">${val}%</b>
-              <div class="bar"><i style="width:${val}%"></i></div></div>`).join("")}
-          </div>
-          <div class="tip-band" style="margin-top:14px">${IC.bulb}
-            <span>${t("bt.annual")} <b class="num" style="color:var(--lime)">${m.annual}%</b> ${t("bt.annualUnit")}.</span></div>
-          <p class="muted" style="font-size:.76rem;margin:12px 0 0">${t("bt.note")}</p>
         </div>
       </div>
-      <style>@media(max-width:800px){.bt-res-grid{grid-template-columns:1fr!important}}</style>`;
+      <div class="bt-chart">
+        <small class="bt-chart-title">${IC.chart} ${t("bt.chartTitle")}</small>
+        ${sohChartSVG(m)}
+      </div>
+      <div class="pred-stats">
+        ${[[t("bt.now"), v.soh, null],[t("bt.y3"), m.y3, m.y3 - v.soh],[t("bt.y5"), m.y5, m.y5 - v.soh]].map(([lb, val, d]) => `
+        <div class="pred-stat"><small>${lb}</small><b class="num">${val}%</b>
+          ${d == null ? `<span class="pred-delta num" style="opacity:.4">—</span>` : `<span class="pred-delta num">${d.toFixed(1)}%</span>`}
+          <div class="bar"><i style="width:${val}%"></i></div></div>`).join("")}
+      </div>
+      <p class="muted" style="font-size:.76rem;margin:14px 0 0">${t("bt.resultDesc")} ${t("bt.note")}</p>`;
   };
   ["btKm","btDays","btFast"].forEach(id => $(id).addEventListener("input", render));
   ["btPark","btCity"].forEach(id => $(id).addEventListener("change", render));
@@ -378,7 +414,7 @@ function toolsHTML(v){
       <div id="dRangeWidget"></div>
     </div></div>
 
-    <div class="duo" style="grid-template-columns:1fr 1fr;align-items:stretch">
+    <div class="duo" style="align-items:stretch">
       <!-- READINESS -->
       <div class="card card-pad">
         <b style="font-size:1.05rem;display:flex;align-items:center;gap:9px">${IC.pin} ${t("vd.readyTitle")}</b>

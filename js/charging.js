@@ -1,7 +1,7 @@
 /* EVHub — Charging: public stations map + P2P community charging */
 "use strict";
 
-const CH = { tab:"public", city:"all", minPower:0, sel:null, p2pCity:"all" };
+const CH = { tab:"public", type:"all", city:"all", minPower:0, sel:null, p2pCity:"all" };
 let chMap = null, chMarkers = [];
 
 Routes.charging = (app, parts, params) => {
@@ -32,25 +32,42 @@ function renderChBody(app, scrollHost){
   else renderP2P(body, scrollHost);
 }
 
-/* ── Public stations ── */
+/* ── Combined map: public stations + community home chargers ── */
 function renderStations(body){
   chMap = null; chMarkers = []; // fresh DOM each render
   body.innerHTML = `
     <div class="card" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end;padding:16px 20px;overflow:visible">
-      <div class="selrow" style="min-width:180px;flex:1;max-width:260px"><label>${t("ch.fCity")}</label>
+      <div class="selrow" style="min-width:220px"><label>${t("ch.fType")}</label>
+        <div class="seg seg-sm" id="stType">
+          ${[["all", t("ch.typeAll")],["public", t("ch.typePublic")],["community", t("ch.typeCommunity")]]
+            .map(([v, lb]) => `<button data-type="${v}" class="${CH.type===v?"on":""}">${v==="community"?IC.home+" ":""}${lb}</button>`).join("")}
+        </div></div>
+      <div class="selrow" style="min-width:170px;flex:1;max-width:240px"><label>${t("ch.fCity")}</label>
         <select id="stCity"><option value="all">${t("mk.allCities")}</option>
-          ${DB.CITIES.filter(c => DB.STATIONS.some(s => s.city === c.id)).map(c => `<option value="${c.id}" ${CH.city===c.id?"selected":""}>${LOC(c)}</option>`).join("")}</select></div>
-      <div class="selrow" style="min-width:180px;flex:1;max-width:260px"><label>${t("ch.fPower")}</label>
+          ${DB.CITIES.filter(c => DB.STATIONS.some(s => s.city === c.id) || DB.HOSTS.some(h => h.city === c.id)).map(c => `<option value="${c.id}" ${CH.city===c.id?"selected":""}>${LOC(c)}</option>`).join("")}</select></div>
+      <div class="selrow" style="min-width:170px;flex:1;max-width:240px"><label>${t("ch.fPower")}</label>
         <select id="stPower">
-          ${[0,60,120,180,350].map(p => `<option value="${p}" ${CH.minPower===p?"selected":""}>${p ? `≥ ${p} ${t("kw")}` : (State.lang==="ar"?"أي قدرة":"Any power")}</option>`).join("")}</select></div>
+          ${[0,7,22,60,120,180,350].map(p => `<option value="${p}" ${CH.minPower===p?"selected":""}>${p ? `≥ ${p} ${t("kw")}` : (State.lang==="ar"?"أي قدرة":"Any power")}</option>`).join("")}</select></div>
       <span class="chip on num" id="stCount" style="margin-bottom:6px"></span>
     </div>
     <div class="map-layout">
       <div class="station-list" id="stList"></div>
-      <div class="map-box"><div id="stMap" style="width:100%;height:100%"></div></div>
+      <div class="map-box"><div id="stMap" style="width:100%;height:100%"></div>
+        <div class="map-legend">
+          <span><i class="lg lg-pub"></i>${t("ch.legendPublic")}</span>
+          <span><i class="lg lg-host"></i>${t("ch.legendHost")}</span>
+        </div></div>
     </div>`;
+  body.querySelectorAll("#stType [data-type]").forEach(b => b.addEventListener("click", () => {
+    CH.type = b.dataset.type;
+    body.querySelectorAll("#stType [data-type]").forEach(x => x.classList.toggle("on", x === b));
+    updateStations(body);
+  }));
   body.querySelector("#stCity").addEventListener("change", e => { CH.city = e.target.value; updateStations(body); });
   body.querySelector("#stPower").addEventListener("change", e => { CH.minPower = +e.target.value; updateStations(body); });
+
+  // list first (works even if the map never loads), then the map adds markers
+  updateStations(body, true);
 
   // map init
   setTimeout(() => {
@@ -167,24 +184,67 @@ function stationCard(s){
     </div></div>`;
 }
 
+function hostMiniCard(h){
+  return `<div class="card st-card host-mini ${CH.sel===h.id?"sel":""}" data-st="${h.id}">
+    <div class="st-head">
+      <div style="min-width:0;flex:1">
+        <b>${IC.home} ${LOC(h.name)} — ${LOC(h.district)}</b>
+        <span class="st-op">${t("ch.hostCard")} · ${cityName(h.city)}</span>
+      </div>
+      <div class="st-power-badge host"><b class="num">${h.power}</b><small>${t("kw")} AC</small></div>
+    </div>
+    <div class="st-meta">
+      <span class="chip">${h.conn}</span>
+      <span class="chip">${IC.star} <span class="num">${h.rating.toFixed(1)}</span> (${h.sessions})</span>
+      <span class="chip">${IC.shield} ${t("ch.hostAddr")}</span>
+    </div>
+    <div class="st-foot">
+      <span style="font-size:.84rem;font-weight:600">
+        <b class="num" style="color:#7c3aed;font-family:'Space Grotesk'">${h.priceKwh.toFixed(2)}</b>
+        <span style="color:var(--ink-2)">${t("sar")}/${t("kwh")}</span>
+      </span>
+      <button class="btn btn-soft btn-sm" data-p2p="${h.id}">${t("ch.bookP2P")}</button>
+    </div></div>`;
+}
+
 function updateStations(body, noMap){
-  const list = DB.STATIONS.filter(s => (CH.city === "all" || s.city === CH.city) && s.power >= CH.minPower);
-  body.querySelector("#stList").innerHTML = list.map(stationCard).join("") ||
+  const stations = CH.type === "community" ? [] :
+    DB.STATIONS.filter(s => (CH.city === "all" || s.city === CH.city) && s.power >= CH.minPower);
+  const hosts = CH.type === "public" ? [] :
+    DB.HOSTS.filter(h => (CH.city === "all" || h.city === CH.city) && h.power >= CH.minPower);
+  body.querySelector("#stList").innerHTML =
+    (stations.map(stationCard).join("") + hosts.map(hostMiniCard).join("")) ||
     `<div class="soon-banner">${t("mk.noResults")}</div>`;
-  body.querySelector("#stCount").innerHTML = `<b class="num">${list.length}</b> ${t("ch.stations")}`;
+  body.querySelector("#stCount").innerHTML =
+    `<b class="num">${stations.length}</b> ${t("ch.stations")} · <b class="num">${hosts.length}</b> ${t("ch.hosts")}`;
   body.querySelectorAll("[data-st]").forEach(c => c.addEventListener("click", () => {
     CH.sel = c.dataset.st;
     body.querySelectorAll("[data-st]").forEach(x => x.classList.toggle("sel", x.dataset.st === CH.sel));
-    const s = DB.STATIONS.find(x => x.id === CH.sel);
+    const s = DB.STATIONS.find(x => x.id === CH.sel) || DB.HOSTS.find(x => x.id === CH.sel);
     if (chMap && s) chMap.flyTo([s.lat, s.lng], 12, {duration:.8});
+  }));
+  body.querySelectorAll("[data-p2p]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const h = DB.HOSTS.find(x => x.id === b.dataset.p2p);
+    if (h) CH.p2pCity = h.city;
+    CH.tab = "p2p";
+    location.hash = "#/charging?tab=p2p";
   }));
   if (chMap && !noMap){
     chMarkers.forEach(m => m.remove()); chMarkers = [];
-    list.forEach(s => {
+    const select = id => { CH.sel = id; body.querySelectorAll("[data-st]").forEach(x => x.classList.toggle("sel", x.dataset.st === id)); };
+    stations.forEach(s => {
       const icon = L.divIcon({className:"ev-pin", html:`<div class="pin"><svg viewBox="0 0 24 24" width="13" height="13" fill="#fff"><path d="M13 2 4.5 13.5H11l-1 8.5L18.5 10.5H12z"/></svg></div>`, iconSize:[30,30], iconAnchor:[15,28]});
       const mk = L.marker([s.lat, s.lng], {icon}).addTo(chMap)
         .bindPopup(`<b>${LOC(s.name)}</b><br><span class="num">${s.power}</span> ${t("kw")} · ${s.conns.join(", ")}<br>${s.tariff.toFixed(2)} ${t("sar")}/${t("kwh")}`);
-      mk.on("click", () => { CH.sel = s.id; body.querySelectorAll("[data-st]").forEach(x => x.classList.toggle("sel", x.dataset.st === s.id)); });
+      mk.on("click", () => select(s.id));
+      chMarkers.push(mk);
+    });
+    hosts.forEach(h => {
+      const icon = L.divIcon({className:"ev-pin host", html:`<div class="pin"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg></div>`, iconSize:[30,30], iconAnchor:[15,28]});
+      const mk = L.marker([h.lat, h.lng], {icon}).addTo(chMap)
+        .bindPopup(`<b>${t("ch.hostCard")} — ${LOC(h.name)}</b><br>${LOC(h.district)} · ${cityName(h.city)}<br><span class="num">${h.power}</span> ${t("kw")} · ${h.conn} · ★ <span class="num">${h.rating.toFixed(1)}</span><br><b class="num">${h.priceKwh.toFixed(2)}</b> ${t("sar")}/${t("kwh")}<br><small>${t("ch.hostAddr")}</small>`);
+      mk.on("click", () => select(h.id));
       chMarkers.push(mk);
     });
   }

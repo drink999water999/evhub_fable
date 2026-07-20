@@ -42,6 +42,9 @@ const IMG = {
   bike:    {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Beryl%20Electric%20Bike.jpg?width=1200", credit:"CC BY 2.0 · bfishadow", page:"https://commons.wikimedia.org/wiki/File:Beryl_Electric_Bike.jpg"},
   scooter: {src:"https://s7ap1.scene7.com/is/image/ninebotstage/ap_en_segway_com_static_images_MAXG2_screen-1-logo?dpr=on%2C3&fmt=png-alpha&network=on", credit:"Segway", page:"https://www.segway.com"},
   wallbox: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Portable%20EV%20Charger%20Wallbox%20Unit%20with%20Red%20CEE%20Plug%20White%20Background%20EV%20WALL%20BOX%20EVWALLBOX.png?width=1200", credit:"CC BY 2.5 · go-e", page:"https://commons.wikimedia.org/wiki/File:Portable_EV_Charger_Wallbox_Unit_with_Red_CEE_Plug_White_Background_EV_WALL_BOX_EVWALLBOX.png"},
+  eactros: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Mercedes-Benz%20eActros%2C%20IAA%202018%2C%20Frankfurt%20(1Y7A1361).jpg?width=1200", credit:"CC BY-SA 4.0 · Matti Blume", page:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_eActros,_IAA_2018,_Frankfurt_(1Y7A1361).jpg"},
+  volvofl: {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Volvo%20FL%20Electric%2C%20IAA%202018%2C%20Frankfurt%20(1Y7A1372).jpg?width=1200", credit:"CC BY-SA 4.0 · Matti Blume", page:"https://commons.wikimedia.org/wiki/File:Volvo_FL_Electric,_IAA_2018,_Frankfurt_(1Y7A1372).jpg"},
+  semi:    {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/Tesla%20Semi%20-%20Christmas%20Eve%202017%20(24455959268).jpg?width=1200", credit:"CC BY 2.0 · Steve Jurvetson", page:"https://commons.wikimedia.org/wiki/File:Tesla_Semi_-_Christmas_Eve_2017_(24455959268).jpg"},
   cable:   {src:"https://commons.wikimedia.org/wiki/Special:Redirect/file/EV%20Type2%20Charging%20Cable.jpg?width=1200", credit:"Wikimedia Commons", page:"https://commons.wikimedia.org/wiki/File:EV_Type2_Charging_Cable.jpg"},
 };
 
@@ -102,6 +105,27 @@ const VEHICLES = [
   mono:["#b8bcc2","#4c5158"],
   warranty:{ar:"بطارية 8 سنوات / 160 ألف كم",en:"Battery 8 yrs / 160,000 km"},
   source:{ar:"وكالة سعودية",en:"Saudi official import"}, sellerId:"d3"},
+
+ {id:"eactros-300", cat:"truck", brand:"Mercedes", model:"eActros 300", year:2025, price:585000, cond:"new",
+  city:"riyadh", odo:0, batt:336, soh:100, range:330, rangeStd:"WLTP", dc:160, ac:22, connAC:"Type 2", connDC:"CCS2",
+  t1080:75, drive:"6x2", seats:2, v2l:false, verified:true, inspected:false, featured:false, img:IMG.eactros,
+  mono:["#c6ccd2","#3f4a52"],
+  warranty:{ar:"بطارية 6 سنوات / 600 ألف كم",en:"Battery 6 yrs / 600,000 km"},
+  source:{ar:"وكالة سعودية — قطاع الأساطيل",en:"Saudi fleet-sector import"}, sellerId:"d3"},
+
+ {id:"volvo-fl-e", cat:"truck", brand:"Volvo", model:"FL Electric", year:2023, price:365000, cond:"used",
+  city:"dammam", odo:48000, batt:265, soh:91, range:300, rangeStd:"City", dc:150, ac:22, connAC:"Type 2", connDC:"CCS2",
+  t1080:90, drive:"4x2", seats:2, v2l:false, verified:true, inspected:true, featured:false, img:IMG.volvofl,
+  mono:["#9fb8ce","#2b4356"],
+  warranty:{ar:"بطارية سنتان متبقيتان",en:"2 yrs battery warranty left"},
+  source:{ar:"أسطول توزيع محلي",en:"Local distribution fleet"}, sellerId:"d3"},
+
+ {id:"tesla-semi", cat:"truck", brand:"Tesla", model:"Semi 500", year:2026, price:890000, cond:"new",
+  city:"jeddah", odo:0, batt:850, soh:100, range:800, rangeStd:"EPA", dc:750, ac:22, connAC:"Type 2", connDC:"MCS",
+  t1080:45, drive:"6x4", seats:2, v2l:false, verified:true, inspected:false, featured:false, img:IMG.semi,
+  mono:["#b8bec6","#3c434c"],
+  warranty:{ar:"بطارية 8 سنوات / مليون كم",en:"Battery 8 yrs / 1M km"},
+  source:{ar:"طلب مسبق — استيراد مباشر",en:"Pre-order — direct import"}, sellerId:"d2"},
 
  {id:"livewire", cat:"motorcycle", brand:"LiveWire", model:"One", year:2024, price:62000, cond:"used",
   city:"riyadh", odo:4200, batt:15.4, soh:97, range:235, rangeStd:"City", dc:25, ac:1.4, connAC:"Type 2", connDC:"CCS2",

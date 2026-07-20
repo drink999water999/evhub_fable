@@ -4,13 +4,25 @@
 const MK = { cat:"car", brand:"all", city:"all", maxPrice:400000, minRange:0, minSoh:0, cond:"all", conn:"all",
   verifiedOnly:false, inspOnly:false, sort:"new", q:"" };
 
+/* price ceiling depends on the category (trucks cost far more than scooters) */
+function catCeil(cat){
+  const pool = (cat === "charger" || cat === "parts")
+    ? DB.PRODUCTS.filter(p => p.cat === cat).map(p => p.price)
+    : DB.VEHICLES.filter(v => v.cat === cat).map(v => v.price);
+  return Math.max(10000, Math.ceil(Math.max(...pool, 0) / 10000) * 10000);
+}
+
 Routes.market = (app, parts, params) => {
-  if (params.get("cat")) MK.cat = params.get("cat");
+  if (params.get("cat")){
+    const c = params.get("cat");
+    if (c !== MK.cat){ MK.cat = c; MK.brand = "all"; MK.maxPrice = catCeil(c); }
+  }
   if (params.get("brand")){ MK.brand = params.get("brand"); MK.cat = "car"; }
   if (params.get("q") !== null) MK.q = params.get("q") || "";
+  if (MK.maxPrice > catCeil(MK.cat)) MK.maxPrice = catCeil(MK.cat);
 
   const catDef = [
-    ["car", DB.IMG.zeekr.src], ["motorcycle", DB.IMG.moto.src], ["scooter", DB.IMG.scooter.src],
+    ["car", DB.IMG.zeekr.src], ["truck", DB.IMG.eactros.src], ["motorcycle", DB.IMG.moto.src], ["scooter", DB.IMG.scooter.src],
     ["bike", DB.IMG.bike.src], ["charger", DB.IMG.wallbox.src], ["parts", "../Media/ev-battery-pack.webp"],
   ];
 
@@ -34,6 +46,7 @@ Routes.market = (app, parts, params) => {
         <div class="market-top">
           <span class="res" id="resCount"></span>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-dark btn-sm fToggleBtn" id="fToggle">${t("mk.filters")}</button>
             <span id="cmpLink"></span>
             <label class="sortsel">${t("mk.sort")}
               <select id="sortSel">
@@ -54,7 +67,7 @@ Routes.market = (app, parts, params) => {
 
   // category thumbs
   app.querySelectorAll("[data-cat]").forEach(el => el.addEventListener("click", e => {
-    e.preventDefault(); MK.cat = el.dataset.cat; MK.brand = "all";
+    e.preventDefault(); MK.cat = el.dataset.cat; MK.brand = "all"; MK.maxPrice = catCeil(MK.cat);
     app.querySelectorAll("[data-cat]").forEach(x => x.classList.toggle("on", x === el));
     renderFilters(app); renderResults(app);
   }));
@@ -63,6 +76,11 @@ Routes.market = (app, parts, params) => {
   renderResults(app);
   app.querySelector("#sortSel").value = MK.sort;
   app.querySelector("#sortSel").addEventListener("change", e => { MK.sort = e.target.value; renderResults(app); });
+  app.querySelector("#fToggle").addEventListener("click", () => {
+    const f = app.querySelector("#filters");
+    f.classList.toggle("open");
+    if (f.classList.contains("open")) f.scrollIntoView({behavior:"smooth", block:"start"});
+  });
 };
 
 function myVehicleObj(){ return DB.VEHICLES.find(v => v.id === State.myVehicle); }
@@ -70,20 +88,26 @@ function myVehicleObj(){ return DB.VEHICLES.find(v => v.id === State.myVehicle);
 function renderFilters(app){
   const el = app.querySelector("#filters");
   const conns = ["all","Type 2","CCS2","GB/T"];
+  const catBrands = [...new Set(DB.VEHICLES.filter(v => v.cat === MK.cat).map(v => v.brand))].sort((a, b) => a.localeCompare(b));
+  const showBrand = !["charger","parts"].includes(MK.cat) && catBrands.length > 1;
   el.innerHTML = `
     <div class="fgroup" style="display:flex;justify-content:space-between;align-items:center">
       <b style="margin:0">${t("mk.filters")}</b>
       <button class="chip chip-btn" id="fClear">${t("mk.clear")}</button></div>
-    ${MK.cat === "car" ? `<div class="fgroup"><b>${t("mk.fBrand")}</b><div class="fopts">
-      <button class="chip chip-btn ${MK.brand==="all"?"on":""}" data-fbrand="all">${t("cat.all")}</button>
-      ${DB.BRANDS.map(b => `<button class="chip chip-btn ${MK.brand===b.id?"on":""}" data-fbrand="${b.id}">${b.id}</button>`).join("")}
-    </div></div>` : ""}
+    ${showBrand ? `<div class="fgroup"><b>${t("mk.fBrand")}</b>
+      <div class="brand-combo" id="brandCombo">
+        <input type="text" id="fBrandQ" autocomplete="off" spellcheck="false"
+          placeholder="${t("mk.brandSearch")}" value="${MK.brand === "all" ? "" : MK.brand}"
+          aria-label="${t("mk.fBrand")}" role="combobox" aria-expanded="false">
+        <button type="button" class="bc-caret" id="fBrandCaret" aria-label="▾">▾</button>
+        <div class="bc-list" id="bcList" hidden role="listbox"></div>
+      </div></div>` : ""}
     <div class="fgroup"><b>${t("mk.fCity")}</b>
       <select id="fCity" style="width:100%;border:1.5px solid var(--line-2);border-radius:12px;padding:10px 13px;background:var(--surface)">
         <option value="all">${t("mk.allCities")}</option>
         ${DB.CITIES.map(c => `<option value="${c.id}" ${MK.city===c.id?"selected":""}>${LOC(c)}</option>`).join("")}</select></div>
     <div class="fgroup"><b>${t("mk.fPrice")} <span class="fval num" id="fPriceV">${SAR(MK.maxPrice)}</span></b>
-      <input type="range" id="fPrice" min="2000" max="400000" step="2000" value="${MK.maxPrice}"></div>
+      <input type="range" id="fPrice" min="2000" max="${catCeil(MK.cat)}" step="2000" value="${MK.maxPrice}"></div>
     <div class="fgroup"><b>${t("mk.fRange")} <span class="fval num" id="fRangeV">${MK.minRange} ${t("km")}</span></b>
       <input type="range" id="fRange" min="0" max="700" step="25" value="${MK.minRange}"></div>
     <div class="fgroup"><b>${t("mk.fSoh")} <span class="fval num" id="fSohV">${MK.minSoh}%</span></b>
@@ -99,9 +123,47 @@ function renderFilters(app){
   el.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => {
     MK[b.dataset.f] = b.dataset.v; renderFilters(app); renderResults(app);
   }));
-  el.querySelectorAll("[data-fbrand]").forEach(b => b.addEventListener("click", () => {
-    MK.brand = b.dataset.fbrand; renderFilters(app); renderResults(app);
-  }));
+
+  /* brand combobox: search-as-you-type dropdown */
+  const combo = el.querySelector("#brandCombo");
+  if (combo){
+    const inp = combo.querySelector("#fBrandQ"), list = combo.querySelector("#bcList");
+    const openList = () => { list.hidden = false; inp.setAttribute("aria-expanded", "true"); };
+    const closeList = () => { list.hidden = true; inp.setAttribute("aria-expanded", "false"); };
+    const pick = brand => {
+      MK.brand = brand;
+      inp.value = brand === "all" ? "" : brand;
+      closeList(); renderResults(app);
+    };
+    const buildList = q => {
+      const query = (q || "").trim().toLowerCase();
+      const matches = catBrands.filter(b => !query || b.toLowerCase().includes(query));
+      list.innerHTML = `
+        <button type="button" class="bc-item ${MK.brand==="all"?"on":""}" data-bc="all">${t("mk.allBrands")}</button>
+        ${matches.map(b => `<button type="button" class="bc-item ${MK.brand===b?"on":""}" data-bc="${b}">${b}
+          <small class="num">${DB.VEHICLES.filter(v => v.cat === MK.cat && v.brand === b).length}</small></button>`).join("")}
+        ${matches.length ? "" : `<div class="bc-empty">${t("mk.noBrand")}</div>`}`;
+      list.querySelectorAll("[data-bc]").forEach(item =>
+        item.addEventListener("mousedown", e => { e.preventDefault(); pick(item.dataset.bc); }));
+    };
+    inp.addEventListener("focus", () => { buildList(inp.value === (MK.brand === "all" ? "" : MK.brand) ? "" : inp.value); openList(); });
+    inp.addEventListener("input", () => {
+      buildList(inp.value); openList();
+      if (!inp.value.trim() && MK.brand !== "all"){ MK.brand = "all"; renderResults(app); buildList(""); }
+      const exact = catBrands.find(b => b.toLowerCase() === inp.value.trim().toLowerCase());
+      if (exact && MK.brand !== exact){ MK.brand = exact; renderResults(app); buildList(inp.value); }
+    });
+    inp.addEventListener("keydown", e => { if (e.key === "Escape") closeList(); });
+    inp.addEventListener("blur", () => setTimeout(() => {
+      closeList();
+      if (MK.brand === "all" && inp.value.trim()) inp.value = "";
+      else if (MK.brand !== "all") inp.value = MK.brand;
+    }, 120));
+    combo.querySelector("#fBrandCaret").addEventListener("mousedown", e => {
+      e.preventDefault();
+      if (list.hidden){ buildList(""); openList(); inp.focus(); } else closeList();
+    });
+  }
   const bindRange = (id, key, fmt) => {
     const inp = el.querySelector("#" + id);
     inp.addEventListener("input", () => { MK[key] = +inp.value; el.querySelector("#" + id + "V").textContent = fmt(+inp.value); renderResults(app); });
@@ -113,7 +175,7 @@ function renderFilters(app){
   el.querySelector("#fVer").addEventListener("change", e => { MK.verifiedOnly = e.target.checked; renderResults(app); });
   el.querySelector("#fInsp").addEventListener("change", e => { MK.inspOnly = e.target.checked; renderResults(app); });
   el.querySelector("#fClear").addEventListener("click", () => {
-    Object.assign(MK, {brand:"all", city:"all", maxPrice:400000, minRange:0, minSoh:0, cond:"all", conn:"all", verifiedOnly:false, inspOnly:false, q:""});
+    Object.assign(MK, {brand:"all", city:"all", maxPrice:catCeil(MK.cat), minRange:0, minSoh:0, cond:"all", conn:"all", verifiedOnly:false, inspOnly:false, q:""});
     renderFilters(app); renderResults(app);
   });
 }

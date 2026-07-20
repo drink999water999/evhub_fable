@@ -89,6 +89,8 @@ const IC = {
   moto:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="2.8"/><circle cx="18.5" cy="17" r="2.8"/><path d="M5.5 17 9 10h4l3 4h2.5M13 10l-1.5-3H9"/></svg>',
   bike:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/><path d="M5.5 17 10 9h5l3.5 8M10 9 8.5 6H11"/></svg>',
   scooter:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h3l3 11h4M5 19h0M8 5 7 3"/><circle cx="5.5" cy="19" r="2.3"/><circle cx="18.5" cy="19" r="2.3"/></svg>',
+  truck:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6h11v10h-11zM13.5 9h4l3 3.5V16h-7"/><circle cx="7" cy="17.8" r="1.9"/><circle cx="17" cy="17.8" r="1.9"/></svg>',
+  home:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>',
   scale:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M8 20h8M6 7l6-3 6 3M6 7l-2.5 6a3 3 0 0 0 5 0zM18 7l-2.5 6a3 3 0 0 0 5 0z"/></svg>',
   check:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   clock:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
@@ -200,7 +202,7 @@ function degradationModel(v, cityId, {kmDay = 38, daysWeek = 4, fastPct = 20, pa
   annual = Math.max(0.5, +annual.toFixed(2));
   const at = y => Math.max(60, +(v.soh - annual * y * (1 + y * 0.025)).toFixed(1));
   const to70 = annual > 0 ? Math.max(1, Math.round((v.soh - 70) / annual)) : 99;
-  return {annual, kmYear, y3: at(3), y5: at(5), to70, pts:[0,1,2,3,4,5,6].map(at)};
+  return {annual, kmYear, y3: at(3), y5: at(5), to70, pts:[0,1,2,3,4,5,6,7,8].map(at)};
 }
 
 /* reveal on scroll */
@@ -231,7 +233,7 @@ function footerHTML(){
         <a href="#/community">${t("nav.community")}</a><a href="#/services">${t("nav.services")}</a>
         <a href="#/sell">${State.lang==="ar"?"أضف إعلانك":"Sell your EV"}</a><a href="#/account">${t("nav.account")}</a></div>
     </div>
-    <div class="foot-note"><span>${t("ft.rights")} · ${t("ft.pdpl")}</span><span>${t("ft.demo")} · <b class="num">build v3.4</b></span></div>
+    <div class="foot-note"><span>${t("ft.rights")} · ${t("ft.pdpl")}</span><span>${t("ft.demo")} · <b class="num">build v3.5</b></span></div>
   </div></footer>`;
 }
 
